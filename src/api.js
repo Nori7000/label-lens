@@ -1,4 +1,4 @@
-// ラベルレンズのサーバー側（Cloudflare Pages Functions）。
+// ラベルレンズのサーバー側（Cloudflare Workers。入口は src/index.js）。
 //   POST /api/checkout  … 1週間無料お試し付きの定期購入（Stripe Checkout）を始める
 //   POST /api/portal    … 契約の確認・解約（Stripe カスタマーポータル）
 //   POST /api/webhook   … Stripe からの通知で会員状態を更新する
