@@ -1,0 +1,17 @@
+{
+  "name": "ラベルレンズ",
+  "short_name": "ラベルレンズ",
+  "description": "食品のバーコードや表示を撮るだけで、原材料を◯△×でひと目で判定するアプリ。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f8f4",
+  "theme_color": "#2f7d6a",
+  "lang": "ja",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

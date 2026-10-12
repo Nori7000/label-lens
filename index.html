@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="食品のバーコードや表示を撮るだけで、原材料を◯△×でひと目で判定するアプリ。">
+<meta name="theme-color" content="#2f7d6a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ラベルレンズ">
+<title>ラベルレンズ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=M+PLUS+2:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow phone column. Scan controls on top, the verdict card with its big mark, then the evidence (reasons, additives, nutrition). */
+:root{
+  --paper:#f4f8f4;      /* page: a faint leafy white */
+  --card:#ffffff;
+  --ink:#1c2924;
+  --muted:#5b6d64;
+  --line:#d3e1d8;
+  --accent:#2f7d6a;     /* buttons, links */
+  --ok:#5fbf97;         /* ◯ soft green */
+  --ok-bg:#e6f5ee;
+  --warn:#e3b33c;       /* △ soft yellow */
+  --warn-bg:#fbf3dc;
+  --bad:#d9573f;        /* × red */
+  --bad-bg:#fbe7e2;
+  --f-display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  --f-body:"M PLUS 2","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0f1714;--card:#16211c;--ink:#e3eee8;--muted:#9fb3a9;--line:#2a3a33;--accent:#7cc9b2;
+  --ok:#6fd0a6;--ok-bg:#163327;--warn:#e9c25a;--warn-bg:#352c13;--bad:#ef7a63;--bad-bg:#3a1c16;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0f1714;--card:#16211c;--ink:#e3eee8;--muted:#9fb3a9;--line:#2a3a33;--accent:#7cc9b2;
+  --ok:#6fd0a6;--ok-bg:#163327;--warn:#e9c25a;--warn-bg:#352c13;--bad:#ef7a63;--bad-bg:#3a1c16;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.7 var(--f-body)}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+header h1{margin:0;font:900 30px/1.1 var(--f-display);letter-spacing:.02em}
+header h1 span{color:var(--accent)}
+header p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h2{margin:0;font:700 17px/1.4 var(--f-display)}
+.small{font-size:13px;color:var(--muted);margin:0}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:52px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:700 14px var(--f-body);cursor:pointer;text-align:center;padding:8px 10px}
+.btn small{white-space:nowrap;flex:none;font:700 10px var(--f-mono);border-radius:6px;padding:2px 6px;margin-left:4px}.btn small.free{background:var(--ok-bg);color:var(--ink)}.btn small.pro{background:var(--warn-bg);color:var(--ink)}.btn.ai{width:100%;margin-top:10px;min-height:44px}footer a{color:var(--accent)}
+.pitch h2{font-size:clamp(17px,5vw,20px)}.nw{white-space:nowrap;display:inline-block}.how{margin:10px 0 0;padding-left:1.4em;display:grid;gap:8px}.how b{display:block}.how span{font-size:13.5px;color:var(--muted)}
+.price{margin:16px 0 12px;padding:14px;border-radius:12px;background:var(--ok-bg);text-align:center}.price p{margin:2px 0}.p-free{font:900 22px var(--f-display)}.p-then{font-size:14px}
+.btn.big{width:100%;min-height:56px;font-size:16px}.center{text-align:center}.linkish{background:none;border:0;padding:4px;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer}
+.auth,.confirm{display:flex;flex-direction:column;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}.auth h3,.confirm h3{margin:0;font:700 17px var(--f-display)}
+.terms-list{margin:0;display:grid;gap:6px;font-size:13.5px}.terms-list dt{font-weight:700}.terms-list dd{margin:0 0 4px;color:var(--ink)}
+.trialnote{margin:0 0 10px;padding:8px 10px;border-radius:10px;background:var(--warn-bg);font-size:13px}
+footer p{margin:0 0 8px}footer a{margin-right:4px}
+[hidden]{display:none!important}
+
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--card)}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.btn[disabled]{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=text],textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font:500 15px var(--f-body);padding:10px 12px}
+textarea{min-height:110px;resize:vertical;line-height:1.6}
+.row input[type=text]{flex:1}
+.status{font-size:14px;color:var(--muted);margin:0;min-height:1.6em}
+.status.err{color:var(--bad)}
+.examples{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 12px;font:500 13px var(--f-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--bad-bg);border-color:var(--bad);color:var(--bad);font-weight:700}
+
+/* verdict */
+.verdict{position:relative;overflow:hidden;padding:22px 18px 18px;border-width:2px}
+.verdict.ok{border-color:var(--ok)}
+.verdict.tri{border-color:var(--warn)}
+.verdict.bad{border-color:var(--bad)}
+.mark{position:absolute;right:-6px;top:-6px;width:150px;height:150px;pointer-events:none;opacity:.55}
+.mark svg{width:100%;height:100%;display:block}
+.v-label{font:700 12px var(--f-mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.v-name{margin:0;font:900 24px/1.25 var(--f-display);max-width:calc(100% - 90px);text-wrap:balance}
+.v-cat{margin:0;font:700 15px var(--f-body)}
+.v-sum{margin:0;font:700 18px/1.5 var(--f-display)}
+.verdict.ok .v-sum{color:var(--accent)}
+.verdict.tri .v-sum{color:var(--ink)}
+.verdict.bad .v-sum{color:var(--bad)}
+.tag-example{display:inline-block;font:700 11px var(--f-mono);letter-spacing:.08em;background:var(--warn-bg);color:var(--ink);border-radius:6px;padding:2px 8px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--paper);border-radius:12px;padding:10px;min-width:0}
+.stat b{display:block;font:700 22px/1.2 var(--f-mono);font-variant-numeric:tabular-nums}
+.stat small{display:block;font-size:12px;color:var(--muted);line-height:1.4}
+.reasons{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.reasons li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;padding:10px;border-radius:12px;min-width:0}
+.reasons li.bad{background:var(--bad-bg)}
+.reasons li.tri{background:var(--warn-bg)}
+.reasons li.ok{background:var(--ok-bg)}
+.lv{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:900 16px var(--f-display);color:var(--card)}
+.lv.bad{background:var(--bad)}.lv.tri{background:var(--warn);color:var(--ink)}.lv.ok{background:var(--ok)}
+.reasons b{display:block;font-size:15px}
+.reasons span{display:block;font-size:13px;color:var(--muted);line-height:1.6}
+.reasons cite{display:block;font-style:normal;font-size:11px;color:var(--muted);margin-top:2px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:700 12px var(--f-body);color:var(--muted)}
+td.j{white-space:nowrap;font-weight:700}
+td.j.bad{color:var(--bad)}td.j.tri{color:var(--ink)}td.j.ok{color:var(--accent)}
+.allergy{display:flex;flex-wrap:wrap;gap:6px}
+.allergy span{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700}
+.caution{margin:0;padding:10px 12px;border-left:4px solid var(--warn);background:var(--warn-bg);border-radius:6px;font-size:13px}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font:700 15px var(--f-display)}
+.rules{font-size:13px;line-height:1.7}
+.rules h3{font:700 14px var(--f-display);margin:12px 0 4px}
+.rules ul{margin:0;padding-left:1.2em}
+.saved{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.saved li button{width:100%;display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:8px 10px;font:500 14px var(--f-body);cursor:pointer;text-align:left}
+.saved li .m{font:900 16px var(--f-display)}
+.m.ok{color:var(--ok)}.m.tri{color:var(--warn)}.m.bad{color:var(--bad)}
+footer{font-size:12px;color:var(--muted);line-height:1.7}
+@media (max-width:380px){.btns{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>ラベル<span>レンズ</span></h1>
+    <p>食品の表示を、ひと目でわかる◯△×に。</p>
+  </header>
+
+  <!-- for people who are not members yet: what it does, the price, and the sign-up -->
+  <section class="card pitch" id="pitch" aria-labelledby="pitchTitle" hidden>
+    <h2 id="pitchTitle">かざすだけで、食品の中身がわかる</h2>
+    <ol class="how">
+      <li><b>バーコードを撮る</b><span>登録済みの商品なら、その場で◯△×が出ます。</span></li>
+      <li><b>初めての商品は、袋の裏を撮る</b><span>AIが原材料と栄養成分を読み取り、判定します。一度読んだ商品は、次から誰でもバーコードだけで判定できます。</span></li>
+      <li><b>理由と出典まで</b><span>赤色2号などの添加物、ラクトアイスなどの種類、豆腐の作り方まで、海外の規制や法律の基準を出典つきで表示します。</span></li>
+    </ol>
+    <p class="small" style="margin:14px 0 6px">判定の例（架空の商品）を押すと、下に結果が出ます。</p>
+    <div class="examples" id="examples"></div>
+    <div class="price">
+      <p class="p-free">最初の<b>1週間は無料</b></p>
+      <p class="p-then">その後 <b>月額380円</b>（税込）</p>
+      <p class="small">無料期間中にいつでも解約でき、解約すれば料金はかかりません。</p>
+    </div>
+    <button class="btn primary big" id="startBtn" type="button">1週間無料で始める</button>
+    <p class="small center"><button class="linkish" id="loginLink" type="button">すでに登録済みの方はログイン</button></p>
+
+    <form class="auth" id="authForm" hidden>
+      <h3 id="authTitle">アカウントを作る</h3>
+      <input id="authEmail" type="email" autocomplete="email" placeholder="メールアドレス" required>
+      <input id="authPass" type="password" autocomplete="new-password" minlength="8" placeholder="パスワード（8文字以上）" required>
+      <button class="btn primary" id="authBtn" type="submit">次へ</button>
+      <p class="small center"><button class="linkish" id="authSwitch" type="button">すでに登録済みの方はログイン</button></p>
+    </form>
+
+    <!-- final confirmation screen required by the Specified Commercial Transactions Act -->
+    <div class="confirm" id="confirmBox" hidden>
+      <h3>お申し込み内容の確認</h3>
+      <dl class="terms-list">
+        <dt>無料期間</dt><dd id="cfTrial">お申し込みから7日間（<span id="cfTrialEnd"></span>まで）</dd>
+        <dt>有料への切り替え</dt><dd id="cfSwitch">無料期間が終わると、<b>自動で有料の定期購入</b>に切り替わり、登録したカードに<b id="cfAmount">月額380円</b>が請求されます。以後、<span id="cfCycle">毎月</span>同じ日に自動で更新されます。</dd>
+        <dt>料金がかからない解約期限</dt><dd><b id="cfDeadline"></b>までに解約すれば、料金は一切かかりません。</dd>
+        <dt>解約の方法</dt><dd>アプリ下の「契約の確認・解約」から、いつでもご自身で解約できます。解約後も、支払い済みの期間の終わりまで使えます。</dd>
+        <dt>支払い方法</dt><dd>クレジットカード（決済はStripe社が行い、カード番号はこのアプリに保存されません）</dd>
+      </dl>
+      <p class="small">お申し込みにより、<a href="terms.html" target="_blank">利用規約</a>と<a href="privacy.html" target="_blank">プライバシーポリシー</a>に同意したものとみなします。</p>
+      <button class="btn primary big" id="checkoutBtn" type="button">上記に同意してカード登録へ進む</button>
+    </div>
+    <p class="status" id="pitchStatus" role="status" aria-live="polite"></p>
+  </section>
+
+  <!-- the app itself (members) -->
+  <section class="card" id="scanCard" aria-labelledby="scanTitle" hidden>
+    <h2 id="scanTitle">商品を調べる</h2>
+    <p class="trialnote" id="trialNote" hidden></p>
+    <div class="btns">
+      <label class="btn primary" for="barcodeFile">バーコードを撮る</label>
+      <label class="btn" for="labelFile" id="labelBtn">袋の裏を撮って読む</label>
+    </div>
+    <input id="barcodeFile" type="file" accept="image/*" capture="environment" hidden>
+    <input id="labelFile" type="file" accept="image/*" capture="environment" hidden>
+    <div class="row">
+      <input id="janInput" type="text" inputmode="numeric" maxlength="14" placeholder="JANコード（13桁）を入力" aria-label="JANコード">
+      <button class="btn" id="janBtn" type="button" style="min-height:44px">調べる</button>
+    </div>
+    <details id="pasteBox">
+      <summary>原材料の文字を貼り付けて調べる</summary>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+        <input id="txtName" type="text" placeholder="商品名・名称（例：ラクトアイス）">
+        <textarea id="txtBody" placeholder="原材料名の欄をそのまま貼り付け（例：砂糖、植物油脂、乳製品／乳化剤、香料、着色料（赤色2号））"></textarea>
+        <button class="btn" id="txtBtn" type="button">この内容で判定する</button>
+      </div>
+    </details>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="card verdict" id="verdict" aria-live="polite"></section>
+  <section class="card" id="detail"></section>
+
+  <section class="card member" aria-labelledby="avoidTitle" hidden>
+    <h2 id="avoidTitle">わたしが避けたいもの</h2>
+    <p class="small">選んだものが入っていると、その商品は×になります。この設定は、この端末にだけ保存されます。</p>
+    <div class="examples" id="avoidChips"></div>
+    <div class="row">
+      <input id="avoidInput" type="text" placeholder="ほかに避けたいもの（例：果糖ぶどう糖液糖）">
+      <button class="btn" id="avoidAdd" type="button" style="min-height:44px">追加</button>
+    </div>
+  </section>
+
+  <section class="card member" aria-labelledby="savedTitle" hidden>
+    <h2 id="savedTitle">最近調べた商品</h2>
+    <p class="small" id="savedNote">この端末で調べた商品です。</p>
+    <ul class="saved" id="savedList"></ul>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>判定のルールと出典</summary>
+      <div class="rules" id="rules"></div>
+    </details>
+  </section>
+
+  <footer>
+    <p class="acct member" hidden><button class="linkish" id="portalBtn" type="button">契約の確認・解約</button>　<button class="linkish" id="logoutBtn" type="button">ログアウト</button></p>
+    <p><a href="tokushoho.html">特定商取引法に基づく表記</a>　<a href="terms.html">利用規約</a>　<a href="privacy.html">プライバシーポリシー</a></p>
+    判定は、パッケージの表示とこのアプリの基準にもとづく参考情報です。日本で販売されている食品は、日本の法律の基準を満たしています。アレルギーについては、必ず実物のパッケージの表示を確認してください。<br>商品データの一部は <a href="https://world.openfoodfacts.org/" target="_blank" rel="noopener">Open Food Facts</a>（ODbL）を利用しています。© Blue Leaf Studio
+  </footer>
+</div>
+
+<script src="config.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k, v){ try { localStorage.setItem(k, v); } catch(e){} } };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const LV = { ok:0, tri:1, bad:2 };
+const MARK = { ok:'◯', tri:'△', bad:'×' };
+
+/* ---------- rule data: additives (facts only, each with where the fact comes from) ---------- */
+const SRC = {
+  fda:'アメリカ食品医薬品局（FDA）', efsa:'欧州連合（EU）の食品添加物規則', iarc:'国際がん研究機関（IARC）', caa:'消費者庁 食品表示基準',
+  milk:'乳及び乳製品の成分規格等に関する省令', mhlw:'厚生労働省 日本人の食事摂取基準（2020年版）'
+};
+const ADD = [
+  { keys:['赤色2号','赤2','アマランス'], name:'赤色2号', use:'着色料（赤）', level:'bad', fact:'アメリカでは1976年から食品への使用が禁止されています。', src:SRC.fda },
+  { keys:['臭素酸カリウム','臭素酸K'], name:'臭素酸カリウム', use:'小麦粉の改良剤（パン）', level:'bad', fact:'EU・イギリス・カナダなどでは食品への使用が認められていません。', src:SRC.efsa },
+  { keys:['赤色3号','赤3','エリスロシン'], name:'赤色3号', use:'着色料（赤）', level:'tri', fact:'アメリカでは2027年1月から食品への使用が禁止されます（2025年1月決定）。', src:SRC.fda },
+  { keys:['赤色102号','赤102','ニューコクシン'], name:'赤色102号', use:'着色料（赤）', level:'tri', fact:'アメリカでは食品への使用が認められていません。EUでは「子どもの活動や注意に悪影響を及ぼす可能性」の表示が必要です。', src:SRC.fda + '／' + SRC.efsa },
+  { keys:['赤色104号','赤104','フロキシン'], name:'赤色104号', use:'着色料（赤）', level:'tri', fact:'アメリカ・EUでは食品への使用が認められていません。', src:SRC.fda + '／' + SRC.efsa },
+  { keys:['赤色105号','赤105','ローズベンガル'], name:'赤色105号', use:'着色料（赤）', level:'tri', fact:'アメリカ・EUでは食品への使用が認められていません。', src:SRC.fda + '／' + SRC.efsa },
+  { keys:['赤色106号','赤106','アシッドレッド'], name:'赤色106号', use:'着色料（赤）', level:'tri', fact:'アメリカ・EUでは食品への使用が認められていません。', src:SRC.fda + '／' + SRC.efsa },
+  { keys:['赤色40号','赤40','アルラレッド'], name:'赤色40号', use:'着色料（赤）', level:'tri', fact:'EUでは「子どもの活動や注意に悪影響を及ぼす可能性」の表示が必要です。', src:SRC.efsa },
+  { keys:['黄色4号','黄4','タートラジン'], name:'黄色4号', use:'着色料（黄）', level:'tri', fact:'EUでは「子どもの活動や注意に悪影響を及ぼす可能性」の表示が必要です。', src:SRC.efsa },
+  { keys:['黄色5号','黄5','サンセットイエロー'], name:'黄色5号', use:'着色料（黄）', level:'tri', fact:'EUでは「子どもの活動や注意に悪影響を及ぼす可能性」の表示が必要です。', src:SRC.efsa },
+  { keys:['二酸化チタン','酸化チタン'], name:'二酸化チタン', use:'着色料（白）', level:'tri', fact:'EUでは2022年から食品添加物としての使用が禁止されています。', src:SRC.efsa },
+  { keys:['ショートニング','マーガリン','ファットスプレッド','部分水素添加','硬化油'], name:'ショートニング・マーガリン類', use:'油脂', level:'tri', fact:'トランス脂肪酸を含むことがあります。アメリカでは部分水素添加油脂の食品への使用が原則禁止されています（2018年〜）。', src:SRC.fda },
+  { keys:['アスパルテーム'], name:'アスパルテーム', use:'甘味料', level:'tri', fact:'国際がん研究機関が2023年に「ヒトに対して発がん性がある可能性がある（グループ2B）」に分類しました。', src:SRC.iarc },
+  { keys:['BHA','ブチルヒドロキシアニソール'], name:'BHA', use:'酸化防止剤', level:'tri', fact:'国際がん研究機関の分類で「ヒトに対して発がん性がある可能性がある（グループ2B）」です。', src:SRC.iarc },
+  { keys:['亜硝酸ナトリウム','亜硝酸Na'], name:'亜硝酸ナトリウム', use:'発色剤（ハム・ソーセージなど）', level:'tri', fact:'国際がん研究機関は「体内でニトロソ化が起こる条件で摂取される亜硝酸塩」を「おそらく発がん性がある（グループ2A）」に分類しています。', src:SRC.iarc },
+  // purpose only: shown in the list so people know what each one is for
+  { keys:['乳化剤'], name:'乳化剤', use:'水と油を混ぜる', level:'info' },
+  { keys:['増粘多糖類','増粘剤'], name:'増粘多糖類', use:'とろみをつける', level:'info' },
+  { keys:['香料'], name:'香料', use:'香りをつける', level:'info' },
+  { keys:['酸味料'], name:'酸味料', use:'酸味をつける', level:'info' },
+  { keys:['調味料（アミノ酸','調味料(アミノ酸'], name:'調味料（アミノ酸等）', use:'うま味をつける', level:'info' },
+  { keys:['pH調整剤','ｐＨ調整剤'], name:'pH調整剤', use:'日持ちをよくする', level:'info' },
+  { keys:['保存料','ソルビン酸','安息香酸'], name:'保存料', use:'日持ちをよくする', level:'info' },
+  { keys:['甘味料','スクラロース','アセスルファム','ステビア'], name:'甘味料', use:'甘みをつける', level:'info' },
+  { keys:['酸化防止剤'], name:'酸化防止剤', use:'変色や酸化を防ぐ', level:'info' },
+  { keys:['着色料','カラメル色素','クチナシ','カロテン','紅麹','ベニコウジ'], name:'着色料', use:'色をつける', level:'info' },
+  { keys:['イーストフード'], name:'イーストフード', use:'パンの発酵を助ける', level:'info' },
+  { keys:['膨張剤','ベーキングパウダー'], name:'膨張剤', use:'ふくらませる', level:'info' },
+  { keys:['消泡剤','グリセリン脂肪酸エステル','シリコーン'], name:'消泡剤', use:'製造中の泡を消す', level:'info' },
+  { keys:['凝固剤','硫酸カルシウム','グルコノデルタラクトン','塩化カルシウム','塩化マグネシウム','にがり'], name:'凝固剤', use:'固める（豆腐など）', level:'info' },
+  { keys:['加工でん粉','加工デンプン'], name:'加工でん粉', use:'とろみ・食感の調整', level:'info' },
+  { keys:['リン酸塩','リン酸Na','リン酸K'], name:'リン酸塩', use:'食感・保水性の調整', level:'info' },
+  { keys:['グリシン'], name:'グリシン', use:'日持ちをよくする', level:'info' },
+  { keys:['酢酸Na','酢酸ナトリウム'], name:'酢酸ナトリウム', use:'日持ちをよくする', level:'info' }
+];
+const ALLERGENS = [['えび',['えび','海老','エビ']],['かに',['かに','蟹','カニ']],['くるみ',['くるみ','クルミ']],['小麦',['小麦']],['そば',['そば']],['卵',['卵','たまご','鶏卵']],['乳',['乳成分','乳製品','乳糖','乳たんぱく','牛乳','脱脂粉乳','全粉乳','生乳','クリーム','バター','チーズ','乳']],['落花生',['落花生','ピーナッツ']]];
+const AVOID_PRESETS = ['赤色2号','植物油脂','果糖ぶどう糖液糖','アスパルテーム','ショートニング','乳化剤','香料','亜硝酸ナトリウム'];
+
+/* ---------- the judging engine ---------- */
+function analyze(p){
+  const name = p.name || '', cat = p.category || '', ing = p.ingredients || '';
+  const all = [name, cat, ing].join(' ');
+  const reasons = [];
+  const add = (level, title, text, src) => reasons.push({ level, title, text, src });
+
+  // additives
+  const found = [];
+  for (const a of ADD){ if (a.keys.some(k => ing.includes(k))) found.push(a); }
+  for (const a of found) if (a.level !== 'info') add(a.level, a.name, a.fact, a.src);
+
+  // product-type quality rules
+  const kind = cat + ' ' + name;
+  if (/ラクトアイス/.test(kind)) add('tri', '種類別：ラクトアイス', '乳固形分3%以上が基準で、アイスクリーム（15%以上）の5分の1。脂肪分は植物油脂が使われることが多い種類です。', SRC.milk);
+  else if (/アイスミルク/.test(kind)) add('tri', '種類別：アイスミルク', '乳固形分10%以上が基準で、アイスクリーム（15%以上）より低い種類です。', SRC.milk);
+  else if (/アイスクリーム/.test(kind)) add('ok', '種類別：アイスクリーム', '乳固形分15%以上（うち乳脂肪8%以上）の、いちばん乳成分の多い種類です。', SRC.milk);
+  if (/乳飲料/.test(kind)) add('tri', '種類別：乳飲料', '生乳100%の「牛乳」ではなく、乳製品などを主な原料にした飲み物です。', SRC.milk);
+  else if (/加工乳/.test(kind)) add('tri', '種類別：加工乳', '生乳だけの「牛乳」ではなく、乳製品を加えて成分を調整した種類です。', SRC.milk);
+  if (/プロセスチーズ|チーズフード/.test(kind)) add('tri', /チーズフード/.test(kind) ? '種類別：チーズフード' : '種類別：プロセスチーズ', 'ナチュラルチーズを加熱・乳化して作られた種類です。', SRC.milk);
+  if (/プレスハム|チョップドハム|混合ソーセージ/.test(kind)) add('tri', '種類：' + kind.match(/プレスハム|チョップドハム|混合ソーセージ/)[0], '肉の塊から作る「ハム」「ソーセージ」とは別の、肉片やつなぎを使った種類です。', SRC.caa);
+  const juice = p.juice_percent != null ? Number(p.juice_percent) : (all.match(/果汁\s*([0-9]{1,3})\s*[%％]/) || [])[1];
+  if (juice != null && !isNaN(juice)){
+    if (Number(juice) >= 100) add('ok', '果汁100%', '果汁だけで作られた飲み物です。', SRC.caa);
+    else add('tri', '果汁' + Number(juice) + '%', '果汁100%ではなく、砂糖や香料などで味をつけた飲み物です。', SRC.caa);
+  }
+  // tofu: strict
+  if (/豆腐/.test(kind) && !/油揚|厚揚|がんも/.test(kind)){
+    const coag = ing.match(/凝固剤[（(]?([^、／/)）]*)/);
+    const nigariOnly = /(にがり|塩化マグネシウム)/.test(ing) && !/(硫酸カルシウム|グルコノデルタラクトン|塩化カルシウム)/.test(ing);
+    if (/(消泡剤|グリセリン脂肪酸エステル|シリコーン)/.test(ing)) add('tri', '豆腐：消泡剤を使用', '昔ながらの作り方では使わない、製造中の泡を消す添加物が使われています。', SRC.caa);
+    if (!nigariOnly) add('tri', '豆腐：にがり以外の凝固剤', coag && coag[1] ? '凝固剤：' + coag[1] + '。にがり（塩化マグネシウム）だけで固めた昔ながらの作り方ではありません。' : '凝固剤の種類がにがり（塩化マグネシウム）だけではありません。', SRC.caa);
+    if (/(加工でん粉|乳化剤|増粘)/.test(ing)) add('tri', '豆腐：大豆以外の材料', '加工でん粉・乳化剤・増粘剤など、大豆・水・凝固剤以外のものが入っています。', SRC.caa);
+    const soy = ing.match(/大豆[（(]([^)）]+)[)）]/);
+    if (soy && !/(国産|国内|日本)/.test(soy[1])) add('tri', '豆腐：輸入大豆', '大豆の産地：' + soy[1] + '。', SRC.caa);
+    if (nigariOnly && !/(消泡剤|グリセリン脂肪酸エステル|シリコーン|加工でん粉|乳化剤|増粘)/.test(ing)) add('ok', '豆腐：にがりだけで固めた作り方', '大豆・水・にがりだけの、昔ながらの作り方です。', SRC.caa);
+  }
+  // additive count (app rule)
+  const addCount = found.length;
+  if (addCount >= 6) add('tri', '添加物の種類が多い（' + addCount + '種類）', 'このアプリでは、用途の違う添加物が6種類以上入っていると△にしています。', 'このアプリの基準');
+
+  // my avoid list
+  const avoid = loadAvoid();
+  for (const w of avoid) if (w && all.includes(w)) add('bad', 'あなたが避けたいもの：' + w, '「わたしが避けたいもの」に登録した「' + w + '」が入っています。', 'あなたの設定');
+
+  // allergens (shown, never judged)
+  const allergens = ALLERGENS.filter(([, ks]) => ks.some(k => all.includes(k))).map(([n]) => n);
+
+  // nutrition
+  const n = p.nutrition || {};
+  const sugar = n.sugar_g != null ? Number(n.sugar_g) : null, carbs = n.carbs_g != null ? Number(n.carbs_g) : null, salt = n.salt_g != null ? Number(n.salt_g) : null;
+
+  const worst = reasons.reduce((m, r) => Math.max(m, LV[r.level]), 0);
+  const level = ['ok', 'tri', 'bad'][worst];
+  reasons.sort((a, b) => LV[b.level] - LV[a.level]);
+  return { level, reasons, found, addCount, allergens, sugar, carbs, salt, per:n.per || '', energy:n.energy_kcal };
+}
+
+/* ---------- rendering ---------- */
+const svgMark = lv => lv === 'ok'
+  ? '<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="36" fill="none" stroke="var(--ok)" stroke-width="11"/></svg>'
+  : lv === 'tri'
+  ? '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 14 L88 82 L12 82 Z" fill="none" stroke="var(--warn)" stroke-width="10" stroke-linejoin="round"/></svg>'
+  : '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M20 20 L80 80 M80 20 L20 80" stroke="var(--bad)" stroke-width="12" stroke-linecap="round"/></svg>';
+const SUM = { ok:'成分も質も、このアプリの基準で問題なし', tri:'気になる点があります', bad:'×になる成分が入っています' };
+let current = null;
+function render(p, opts = {}){
+  current = { p, opts };
+  const r = analyze(p);
+  const v = $('#verdict');
+  v.className = 'card verdict ' + r.level;
+  v.innerHTML = `<div class="mark">${svgMark(r.level)}</div>
+    <div class="v-label">判定 ${MARK[r.level]}${opts.example ? ' <span class="tag-example">架空の商品の例</span>' : ''}</div>
+    <h2 class="v-name">${esc(p.name || '名前なし')}</h2>
+    ${p.category ? `<p class="v-cat">${esc(p.category)}</p>` : ''}
+    <p class="v-sum">${SUM[r.level]}</p>
+    <div class="stats">
+      <div class="stat"><b>${r.addCount}</b><small>添加物の種類</small></div>
+      <div class="stat"><b>${r.sugar != null ? (r.sugar / 4).toFixed(1) : r.carbs != null ? (r.carbs / 4).toFixed(1) : '—'}</b><small>${r.sugar != null ? '糖質を角砂糖（4g）にすると' : r.carbs != null ? '炭水化物を角砂糖（4g）にすると' : '糖質の表示なし'}${r.per ? '（' + esc(r.per) + '）' : ''}</small></div>
+      <div class="stat"><b>${r.salt != null ? Math.round(r.salt / 7.5 * 100) + '%' : '—'}</b><small>${r.salt != null ? '食塩' + r.salt + 'g。1日の目標（男性7.5g）に対して' : '食塩の表示なし'}</small></div>
+    </div>`;
+  const reasonItems = r.reasons.length ? r.reasons.map(x => `<li class="${x.level}"><div class="lv ${x.level}">${MARK[x.level]}</div><div><b>${esc(x.title)}</b><span>${esc(x.text)}</span>${x.src ? `<cite>出典：${esc(x.src)}</cite>` : ''}</div></li>`).join('')
+    : `<li class="ok"><div class="lv ok">◯</div><div><b>気になる点は見つかりませんでした</b><span>海外で禁止・制限されている成分や、このアプリの基準で△になる点は表示されていません。</span></div></li>`;
+  const addRows = r.found.map(a => `<tr><td>${esc(a.name)}</td><td>${esc(a.use)}</td><td>${esc(a.fact || '—')}</td><td class="j ${a.level === 'info' ? 'ok' : a.level}">${a.level === 'info' ? '—' : MARK[a.level]}</td></tr>`).join('');
+  $('#detail').innerHTML = `<h2>判定の理由</h2><ul class="reasons">${reasonItems}</ul>
+    ${r.found.length ? `<h2>入っている添加物</h2><div class="tbl"><table><thead><tr><th>名前</th><th>何のため</th><th>海外での扱いなど</th><th>判定</th></tr></thead><tbody>${addRows}</tbody></table></div>` : ''}
+    <h2>アレルギー物質（特定原材料8品目）</h2>
+    ${r.allergens.length ? `<div class="allergy">${r.allergens.map(a => `<span>${esc(a)}</span>`).join('')}</div>` : '<p class="small">表示の中に見つかりませんでした。</p>'}
+    <p class="caution">アレルギーは命に関わります。読み取りの間違いや表示の変更もあるため、必ず実物のパッケージの表示を確認してください。</p>
+    ${p.ingredients ? `<details><summary>読み取った原材料名</summary><p class="small" style="margin-top:8px">${esc(p.ingredients)}</p></details>` : ''}`;
+}
+
+/* ---------- examples (fictional products, clearly marked) ---------- */
+const EXAMPLES = [
+  { label:'ラクトアイス', p:{ name:'バニラアイスバー', category:'ラクトアイス', ingredients:'砂糖、植物油脂、乳製品、水あめ、ぶどう糖果糖液糖／乳化剤、安定剤（増粘多糖類）、香料、着色料（カロテン）', nutrition:{ per:'1本（70ml）当たり', energy_kcal:120, sugar_g:13.5, salt_g:0.06 } } },
+  { label:'にがり豆腐', p:{ name:'もめん豆腐', category:'木綿豆腐', ingredients:'丸大豆（国産）／凝固剤（塩化マグネシウム（にがり））', nutrition:{ per:'100g当たり', energy_kcal:80, carbs_g:1.5, salt_g:0 } } },
+  { label:'消泡剤入り豆腐', p:{ name:'きぬ豆腐', category:'絹ごし豆腐', ingredients:'大豆（カナダ）／豆腐用凝固剤（硫酸カルシウム、塩化マグネシウム）、消泡剤（グリセリン脂肪酸エステル）', nutrition:{ per:'100g当たり', energy_kcal:60, carbs_g:2, salt_g:0 } } },
+  { label:'赤い駄菓子', p:{ name:'いちごキャンディ', category:'キャンディ', ingredients:'砂糖、水あめ／酸味料、香料、着色料（赤色2号、赤色102号）', nutrition:{ per:'1袋（30g）当たり', energy_kcal:117, sugar_g:29, salt_g:0 } } },
+  { label:'シンプルな食パン', p:{ name:'食パン', category:'食パン', ingredients:'小麦粉（国内製造）、砂糖、バター、塩、パン酵母', nutrition:{ per:'1枚（60g）当たり', energy_kcal:158, carbs_g:28, salt_g:0.7 } } },
+  { label:'果汁30%飲料', p:{ name:'りんごドリンク', category:'清涼飲料水', ingredients:'果実（りんご）、果糖ぶどう糖液糖／酸味料、香料、ビタミンC', juice_percent:30, nutrition:{ per:'500ml当たり', energy_kcal:220, sugar_g:55, salt_g:0.1 } } }
+];
+$('#examples').innerHTML = EXAMPLES.map((e, i) => `<button class="chip" type="button" data-ex="${i}">${esc(e.label)}</button>`).join('');
+$('#examples').addEventListener('click', ev => { const b = ev.target.closest('[data-ex]'); if (!b) return; render(EXAMPLES[+b.dataset.ex].p, { example:true }); setStatus(''); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' }); });
+
+/* ---------- my avoid list (this device only) ---------- */
+function loadAvoid(){ try { return JSON.parse(store.get('ll_avoid') || '[]'); } catch(e){ return []; } }
+function saveAvoid(list){ store.set('ll_avoid', JSON.stringify(list)); }
+function renderAvoid(){
+  const list = loadAvoid(), all = [...new Set([...AVOID_PRESETS, ...list])];
+  $('#avoidChips').innerHTML = all.map(w => `<button class="chip" type="button" data-w="${esc(w)}" aria-pressed="${list.includes(w)}">${esc(w)}</button>`).join('');
+}
+$('#avoidChips').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-w]'); if (!b) return;
+  const w = b.dataset.w, list = loadAvoid(), i = list.indexOf(w);
+  if (i >= 0) list.splice(i, 1); else list.push(w);
+  saveAvoid(list); renderAvoid(); if (current) render(current.p, current.opts);
+});
+$('#avoidAdd').addEventListener('click', () => {
+  const w = $('#avoidInput').value.trim().slice(0, 20); if (!w) return;
+  const list = loadAvoid(); if (!list.includes(w)) list.push(w);
+  saveAvoid(list); $('#avoidInput').value = ''; renderAvoid(); if (current) render(current.p, current.opts);
+});
+
+/* ---------- rules page ---------- */
+$('#rules').innerHTML = `
+  <h3>判定の決め方</h3><ul>
+    <li>いちばん悪い結果を大きな印で表示します（× ＞ △ ＞ ◯）。</li>
+    <li><b>×</b>：赤色2号、臭素酸カリウムが入っているとき（このアプリの基準）。または「わたしが避けたいもの」が入っているとき。</li>
+    <li><b>△</b>：アメリカやEUで禁止・制限・警告表示の対象になっている成分があるとき。種類別などから、その食品本来の基準より低い種類だとわかるとき。添加物が6種類以上のとき。</li>
+    <li><b>◯</b>：上のどれにも当てはまらないとき。</li></ul>
+  <h3>種類ごとの基準</h3><ul>
+    <li>アイス：アイスクリームは◯、アイスミルク・ラクトアイスは△（${SRC.milk}）。</li>
+    <li>牛乳：「牛乳」は◯、「加工乳」「乳飲料」は△。チーズ：プロセスチーズ・チーズフードは△。</li>
+    <li>ジュース：果汁100%は◯、100%未満は△。ハム・ソーセージ：プレスハム・チョップドハム・混合ソーセージは△。</li>
+    <li>豆腐：にがり（塩化マグネシウム）だけで固め、消泡剤や大豆以外の材料を使っていなければ◯。消泡剤、にがり以外の凝固剤、加工でん粉などの使用、輸入大豆は△。</li></ul>
+  <h3>数字の目安</h3><ul>
+    <li>角砂糖は1個4gで計算しています。</li>
+    <li>食塩は、${SRC.mhlw}の目標量（成人男性7.5g未満、成人女性6.5g未満）のうち、男性の値と比べています。</li></ul>
+  <h3>出典</h3><ul>${Object.values(SRC).map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+  <p class="small">特定の会社や商品を評価するものではなく、パッケージの表示から、どの商品にも同じルールで判定しています。</p>`;
+
+/* ---------- status ---------- */
+function setStatus(msg, err){ const s = $('#status'); s.textContent = msg; s.classList.toggle('err', !!err); }
+
+/* ---------- account: Supabase login + subscription state ---------- */
+const CFG = window.LL_CONFIG || {};
+const sb = window.supabase && CFG.supabaseUrl && CFG.supabaseKey ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey) : null;
+let session = null, sub = null;
+const pitchStatus = (msg, err) => { const s = $('#pitchStatus'); s.textContent = msg; s.classList.toggle('err', !!err); };
+const isMember = s => s && (s.status === 'trialing' || s.status === 'active') && new Date(s.current_period_end) > new Date();
+const ymd = d => `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+async function api(path, body){
+  const r = await fetch('/api/' + path, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + (session ? session.access_token : '') }, body:JSON.stringify(body || {}) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(j.error || 'error'), { code:j.error, status:r.status });
+  return j;
+}
+async function refresh(){
+  sub = null;
+  if (sb){ const { data } = await sb.auth.getSession(); session = data.session; }
+  if (session){ const { data } = await sb.from('ll_subscriptions').select('*').eq('user_id', session.user.id).maybeSingle(); sub = data || null; }
+  const member = isMember(sub);
+  $('#pitch').hidden = member; $('#scanCard').hidden = !member;
+  document.querySelectorAll('.member').forEach(e => e.hidden = !member);
+  if (member && sub.status === 'trialing'){ $('#trialNote').hidden = false; $('#trialNote').textContent = `無料お試し中：${ymd(new Date(sub.current_period_end))}まで。それまでに解約すれば料金はかかりません。`; }
+  else $('#trialNote').hidden = true;
+  if (!member){
+    $('#startBtn').textContent = sub && sub.trial_used ? '定期購入を再開する' : '1週間無料で始める';
+    $('#loginLink').hidden = !!session;
+    if (session){ $('#authForm').hidden = true; }
+  }
+  return member;
+}
+let authMode = 'signup';
+function showAuth(mode){
+  authMode = mode; $('#authForm').hidden = false; $('#confirmBox').hidden = true;
+  $('#authTitle').textContent = mode === 'signup' ? 'アカウントを作る' : 'ログイン';
+  $('#authPass').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+  $('#authSwitch').textContent = mode === 'signup' ? 'すでに登録済みの方はログイン' : '初めての方はこちら（アカウントを作る）';
+  $('#authEmail').focus();
+}
+function showConfirm(){
+  $('#authForm').hidden = true; $('#confirmBox').hidden = false; updateConfirm();
+  $('#confirmBox').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+function updateConfirm(){
+  const trial = !(sub && sub.trial_used);
+  const end = new Date(Date.now() + 7 * 864e5), deadline = new Date(end.getTime() - 864e5);
+  $('#cfTrialEnd').textContent = ymd(end); $('#cfDeadline').textContent = ymd(deadline);
+  for (const dd of [$('#cfTrial'), $('#cfDeadline').parentElement]){ dd.hidden = !trial; dd.previousElementSibling.hidden = !trial; }
+  $('#cfSwitch').innerHTML = trial ? `無料期間が終わると、<b>自動で有料の定期購入</b>に切り替わり、登録したカードに<b>月額380円</b>が請求されます。以後、毎月同じ日に自動で更新されます。`
+    : `<b>無料期間はありません</b>（お試し済みのため）。お申し込み時に<b>月額380円</b>が請求され、以後毎月同じ日に自動で更新されます。`;
+  $('#cfSwitch').previousElementSibling.textContent = trial ? '有料への切り替え' : '料金と更新';
+  $('#checkoutBtn').textContent = trial ? '上記に同意してカード登録へ進む' : '上記に同意して支払いへ進む';
+}
+$('#startBtn').addEventListener('click', () => session ? showConfirm() : showAuth('signup'));
+$('#loginLink').addEventListener('click', () => showAuth('login'));
+$('#authSwitch').addEventListener('click', () => showAuth(authMode === 'signup' ? 'login' : 'signup'));
+$('#authForm').addEventListener('submit', async ev => {
+  ev.preventDefault(); if (!sb) return pitchStatus('ただいま接続できません。時間をおいて試してください。', true);
+  const email = $('#authEmail').value.trim(), password = $('#authPass').value;
+  $('#authBtn').disabled = true; pitchStatus('');
+  try {
+    const { data, error } = authMode === 'signup' ? await sb.auth.signUp({ email, password }) : await sb.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    if (!data.session){ pitchStatus('確認メールを送りました。メールのリンクを開いてから、ここに戻って「すでに登録済みの方はログイン」から進んでください。'); return; }
+    if (await refresh()) return;
+    showConfirm();
+  } catch(e){
+    const m = String(e && e.message || '');
+    pitchStatus(/Invalid login/i.test(m) ? 'メールアドレスかパスワードが違います。' : /already registered/i.test(m) ? 'このメールアドレスは登録済みです。ログインしてください。' : /Password/i.test(m) ? 'パスワードは8文字以上にしてください。' : 'うまくいきませんでした。もう一度試してください。', true);
+  } finally { $('#authBtn').disabled = false; }
+});
+$('#checkoutBtn').addEventListener('click', async () => {
+  $('#checkoutBtn').disabled = true; pitchStatus('カード登録の画面へ移動しています…');
+  try { const { url } = await api('checkout'); location.href = url; }
+  catch(e){ pitchStatus('移動できませんでした。時間をおいてもう一度試してください。', true); $('#checkoutBtn').disabled = false; }
+});
+$('#portalBtn').addEventListener('click', async () => {
+  try { const { url } = await api('portal'); location.href = url; } catch(e){ setStatus('契約の画面を開けませんでした。時間をおいて試してください。', true); }
+});
+$('#logoutBtn').addEventListener('click', async () => { if (sb) await sb.auth.signOut(); session = null; await refresh(); window.scrollTo(0, 0); });
+
+/* ---------- product lookup: shared store, then Open Food Facts ---------- */
+async function dbGet(jan){
+  if (!sb) return null;
+  const { data } = await sb.from('ll_products').select('*').eq('jan', jan).maybeSingle();
+  return data || null;
+}
+async function offGet(jan){
+  try {
+    const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${jan}.json?fields=product_name,product_name_ja,ingredients_text_ja,ingredients_text,nutriments`);
+    if (!r.ok) return null;
+    const d = await r.json(); const p = d && d.product; if (!p) return null;
+    const ing = p.ingredients_text_ja || p.ingredients_text || '';
+    if (!ing) return null;
+    const n = p.nutriments || {};
+    const num = v => v == null || v === '' ? null : Number(v);
+    return { name:p.product_name_ja || p.product_name || '', category:'', ingredients:ing,
+      nutrition:{ per:'100g当たり', energy_kcal:num(n['energy-kcal_100g']), sugar_g:num(n.sugars_100g), carbs_g:num(n.carbohydrates_100g), salt_g:num(n.salt_100g) } };
+  } catch(e){ return null; }
+}
+const rowToLabel = x => ({ name:x.name, category:x.category, ingredients:x.ingredients, juice_percent:x.juice_percent, nutrition:x.nutrition || {} });
+
+/* ---------- history on this device ---------- */
+function loadHist(){ try { return JSON.parse(store.get('ll_hist') || '[]'); } catch(e){ return []; } }
+function pushHist(jan, label){
+  const h = loadHist().filter(x => x.jan !== jan); h.unshift({ jan, label });
+  store.set('ll_hist', JSON.stringify(h.slice(0, 30))); renderSaved();
+}
+function renderSaved(){
+  const items = loadHist();
+  $('#savedList').innerHTML = items.length ? items.map(x => {
+    let lv = 'ok'; try { lv = analyze(x.label).level; } catch(e){}
+    return `<li><button type="button" data-jan="${esc(x.jan)}"><span>${esc(x.label.name || '名前なし')}<br><small class="small">${esc(x.jan)}</small></span><span class="m ${lv}">${MARK[lv]}</span></button></li>`;
+  }).join('') : '<li class="small">まだありません。バーコードを撮ってみましょう。</li>';
+}
+$('#savedList').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-jan]'); if (!b) return;
+  const x = loadHist().find(h => h.jan === b.dataset.jan); if (!x) return;
+  render(x.label); setStatus(`JAN ${x.jan}`); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' });
+});
+
+/* ---------- barcode ---------- */
+let pendingJan = null;
+const validJan = s => /^(\d{8}|\d{13})$/.test(s);
+async function decodeBarcode(file){
+  if ('BarcodeDetector' in window){
+    try {
+      const det = new window.BarcodeDetector({ formats:['ean_13','ean_8'] });
+      const bmp = await createImageBitmap(file); const res = await det.detect(bmp);
+      if (res && res[0]) return res[0].rawValue;
+    } catch(e){}
+  }
+  if (window.ZXing){
+    const url = URL.createObjectURL(file);
+    try { const r = await new window.ZXing.BrowserMultiFormatReader().decodeFromImageUrl(url); return r && r.getText(); }
+    catch(e){ return null; } finally { URL.revokeObjectURL(url); }
+  }
+  return null;
+}
+$('#barcodeFile').addEventListener('change', async ev => {
+  const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!f) return;
+  setStatus('バーコードを読み取っています…');
+  const code = await decodeBarcode(f);
+  if (!code || !validJan(code)) return setStatus('バーコードを読み取れませんでした。バーコードが大きく、ピントが合うように撮り直すか、下の数字を入力してください。', true);
+  $('#janInput').value = code; lookupJan(code);
+});
+$('#janBtn').addEventListener('click', () => { const v = $('#janInput').value.replace(/\D/g, ''); if (!validJan(v)) return setStatus('JANコードは8桁か13桁の数字です。', true); lookupJan(v); });
+async function lookupJan(jan){
+  pendingJan = jan;
+  setStatus(`JAN ${jan} を探しています…`);
+  let row = null; try { row = await dbGet(jan); } catch(e){}
+  if (row){ const l = rowToLabel(row); render(l); pushHist(jan, l); setStatus(`JAN ${jan}：登録されている表示から判定しました。`); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  const off = await offGet(jan);
+  if (off){ render(off); pushHist(jan, off); setStatus(`JAN ${jan}：Open Food Facts（世界の食品データベース）の情報から判定しました。`); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  setStatus(`JAN ${jan}：初めての商品です。「袋の裏を撮って読む」で原材料の表示を撮ってください。読み取ると、このバーコードに登録されます。`);
+}
+
+/* ---------- label photo → AI reads it on our server ---------- */
+async function toJpeg(file){
+  const bmp = await createImageBitmap(file);
+  const s = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.85).split(',')[1];
+}
+$('#labelFile').addEventListener('change', async ev => {
+  const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (!f) return;
+  setStatus('AIが表示を読み取っています…（5〜20秒ほど）');
+  try {
+    const { label, saved } = await api('read', { image:await toJpeg(f), jan:pendingJan });
+    render(label); if (pendingJan) pushHist(pendingJan, label);
+    setStatus('読み取った表示から判定しました。' + (saved ? `　JAN ${pendingJan} に登録しました。次からはバーコードだけで判定できます。` : ''));
+    $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' });
+  } catch(e){
+    setStatus(e.code === 'no_ingredients' ? '原材料名を読み取れませんでした。原材料の欄が画面に大きく写るように撮り直してください。'
+      : e.code === 'not_member' ? '会員の期間が終わっています。ページを開き直してください。'
+      : e.code === 'too_many' ? '今日の読み取り回数の上限に達しました。明日また使えます。'
+      : '読み取りに失敗しました。もう一度撮影してください。', true);
+  }
+});
+
+/* ---------- pasted text ---------- */
+const NEXT_FIELD = /(内容量|賞味期限|消費期限|保存方法|製造者|製造所|販売者|加工者|輸入者|原産国名|栄養成分表示|使用上の注意)/;
+function parseLabel(text, nm){
+  const t = text.replace(/\r/g, '').replace(/[ \t　]+/g, ' ');
+  const flat = t.replace(/\n/g, '');
+  const cat = ((t.match(/種類別(?:名称)?\s*[:：]?\s*([^\s、:：]{2,12})/) || t.match(/名称\s*[:：]?\s*([^\s、:：]{2,12})/) || [])[1] || '').split(/原材料|内容量/)[0];
+  let ing = flat;
+  const m = flat.match(/原材料名?\s*[:：]?\s*(.*)$/);
+  if (m) ing = m[1];
+  const cut = ing.search(NEXT_FIELD); if (cut > 0) ing = ing.slice(0, cut);
+  const g = re => { const x = flat.match(re); return x ? Number(x[1]) : null; };
+  return { name:nm || cat || '貼り付けた商品', category:cat || nm || '', ingredients:ing.trim(),
+    juice_percent:g(/果汁\s*([0-9]{1,3})\s*[%％]/),
+    nutrition:{ per:(flat.match(/栄養成分表示\s*[（(]?([^)）]*当たり)/) || [])[1] || '',
+      energy_kcal:g(/エネルギー[^0-9]*([0-9.]+)\s*kcal/i), sugar_g:g(/糖質[^0-9]*([0-9.]+)/) ?? g(/糖類[^0-9]*([0-9.]+)/),
+      carbs_g:g(/炭水化物[^0-9]*([0-9.]+)/), salt_g:g(/食塩相当量[^0-9]*([0-9.]+)/) } };
+}
+$('#txtBtn').addEventListener('click', () => {
+  const body = $('#txtBody').value.trim(), nm = $('#txtName').value.trim();
+  if (!body) return setStatus('原材料名を貼り付けてください。', true);
+  render(parseLabel(body, nm)); setStatus('貼り付けた内容から判定しました。'); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' });
+});
+
+/* ---------- install as an app ---------- */
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+
+renderAvoid();
+renderSaved();
+render(EXAMPLES[0].p, { example:true });
+(async () => {
+  const back = new URLSearchParams(location.search).get('checkout');
+  if (back) history.replaceState(null, '', location.pathname);
+  let member = await refresh().catch(() => false);
+  // just back from Stripe: the webhook may land a few seconds later
+  for (let i = 0; back === 'done' && !member && i < 6; i++){ pitchStatus('登録を確認しています…'); await new Promise(r => setTimeout(r, 2000)); member = await refresh().catch(() => false); }
+  if (back === 'done') pitchStatus(member ? '' : '登録の確認に時間がかかっています。少し待ってからページを開き直してください。', !member);
+  if (member && back === 'done') setStatus('ようこそ。バーコードを撮って始めましょう。');
+  if (sb) sb.auth.onAuthStateChange((_e, s) => { session = s; });
+})();
+})();
+</script>
+</body>
+</html>
