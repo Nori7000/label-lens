@@ -7,14 +7,18 @@
 
 | ファイル | 内容 |
 |---|---|
-| `index.html` | アプリ本体（紹介・申込み・判定ルール・画面すべて） |
-| `config.js` | ブラウザ用の Supabase 接続先（公開してよいキーだけ） |
-| `functions/api/[action].js` | サーバー側：`checkout`（申込み）`portal`（解約）`webhook`（Stripe通知）`read`（AI読み取り） |
+| `public/index.html` | アプリ本体（紹介・申込み・判定ルール・画面すべて） |
+| `public/config.js` | ブラウザ用の Supabase 接続先（公開してよいキーだけ） |
+| `public/tokushoho.html` `terms.html` `privacy.html` | 特定商取引法の表記・利用規約・プライバシーポリシー（【要記入】を埋める） |
+| `public/manifest.webmanifest` `sw.js` `icon*` | ホーム画面に追加してアプリとして起動するための設定 |
+| `src/index.js` | Workers の入口（/api/* はサーバー処理、それ以外は public/ を返す） |
+| `src/api.js` | サーバー側：`checkout`（申込み）`portal`（解約）`webhook`（Stripe通知）`read`（AI読み取り） |
+| `wrangler.jsonc` | Cloudflare Workers の設定 |
 | `supabase/schema.sql` | テーブル（商品・契約・読み取り回数）。SQL Editor で1回実行 |
-| `tokushoho.html` `terms.html` `privacy.html` | 特定商取引法の表記・利用規約・プライバシーポリシー（【要記入】を埋める） |
-| `manifest.webmanifest` `sw.js` `icon*` | ホーム画面に追加してアプリとして起動するための設定 |
 
-## 公開先：Cloudflare Pages（環境変数）
+## 公開先：Cloudflare Workers（GitHub 連携。Deploy command は `npx wrangler deploy`）
+
+環境変数は Workers の Settings → Variables and Secrets に登録する（キー類は「Secret」で）。
 
 | 名前 | 中身 |
 |---|---|
@@ -26,7 +30,7 @@
 | `STRIPE_PRICE_MONTHLY` | 380円/月 の価格ID |
 | `ANTHROPIC_API_KEY` | AI読み取り用 |
 | `ANTHROPIC_MODEL` | 省略可（既定 `claude-haiku-5-5`） |
-| `SITE_URL` | 公開URL（例 `https://label-lens.pages.dev`） |
+| `SITE_URL` | 公開URL（例 `https://label-lens.kamakuraejison.workers.dev`） |
 
 Stripe の Webhook 送信先：`{SITE_URL}/api/webhook`、イベント：`customer.subscription.created / updated / deleted`。
 Stripe のカスタマーポータルで「解約」を有効にする。Supabase の Authentication → URL Configuration の Site URL を `SITE_URL` にする。

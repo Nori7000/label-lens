@@ -1,0 +1,9 @@
+{
+  // ラベルレンズ（Cloudflare Workers）。画面は public/、サーバー処理は src/。
+  "name": "label-lens",
+  "main": "src/index.js",
+  "compatibility_date": "2025-09-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  // 管理画面で設定した変数を、デプロイのたびに消さない
+  "keep_vars": true
+}
