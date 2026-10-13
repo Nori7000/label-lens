@@ -51,7 +51,30 @@ header p{margin:4px 0 0;color:var(--muted);font-size:14px}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:52px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:700 14px var(--f-body);cursor:pointer;text-align:center;padding:8px 10px}
 .btn small{white-space:nowrap;flex:none;font:700 10px var(--f-mono);border-radius:6px;padding:2px 6px;margin-left:4px}.btn small.free{background:var(--ok-bg);color:var(--ink)}.btn small.pro{background:var(--warn-bg);color:var(--ink)}.btn.ai{width:100%;margin-top:10px;min-height:44px}footer a{color:var(--accent)}
-.pitch h2{font-size:clamp(17px,5vw,20px)}.nw{white-space:nowrap;display:inline-block}.how{margin:10px 0 0;padding-left:1.4em;display:grid;gap:8px}.how b{display:block}.how span{font-size:13.5px;color:var(--muted)}
+.pitch h2{font-size:clamp(20px,6vw,24px);line-height:1.35}
+.lead{margin:6px 0 14px;color:var(--muted)}
+.hero{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hero button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px 10px;border-radius:16px;border:2px solid transparent;cursor:pointer;color:var(--ink);font:inherit;min-width:0}
+.hero button.ok{background:var(--ok-bg);border-color:var(--ok)}.hero button.tri{background:var(--warn-bg);border-color:var(--warn)}.hero button.bad{background:var(--bad-bg);border-color:var(--bad)}
+.hero button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hero svg{width:64%;max-width:96px;aspect-ratio:1;display:block}
+.hero b{font:900 13px/1.3 var(--f-display);text-align:center}.hero small{font-size:11.5px;color:var(--muted);line-height:1.35;text-align:center}
+.start-top{margin-top:14px}
+.hero-cap{margin:6px 0 0;font-size:12px;color:var(--muted);text-align:center}
+.sec{margin:22px 0 10px;font:900 17px var(--f-display)}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.steps li{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:12px 6px;border-radius:14px;background:var(--paper);counter-increment:st;position:relative;min-width:0}
+.steps li::before{content:counter(st);position:absolute;top:6px;left:8px;font:700 12px var(--f-mono);color:var(--accent)}
+.step-ic{width:44px;height:44px;color:var(--accent)}.step-ic svg{width:100%;height:100%}
+.steps b{font-size:13.5px;line-height:1.35}.steps small{font-size:11.5px;color:var(--muted);line-height:1.45}
+.sample{border:2px solid var(--warn);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.sample-top{display:flex;align-items:center;gap:12px}.sample-top svg{width:64px;height:64px;flex:none}
+.sample-top b{display:block;font:900 17px var(--f-display)}.sample-top span{display:block;font-size:13px;font-weight:700}.sample-top em{display:block;font-style:normal;font-weight:700;font-size:14px}
+.cubes{display:block;width:60px;height:13px;margin:2px 0;fill:var(--muted);opacity:.7}.unit{display:inline!important;font:700 12px var(--f-body)!important;margin-left:2px}
+.sample-adds{display:flex;flex-wrap:wrap;gap:6px}.sample-adds span{font-size:12px;background:var(--paper);border-radius:8px;padding:4px 8px}.sample-adds b{margin-right:4px}
+.sample-allergy{font-size:13px;font-weight:700}.sample-allergy span{display:inline-block;margin-left:4px;padding:1px 10px;border-radius:999px;border:1px solid var(--line);background:var(--paper)}
+.sample-cap{margin:0;font-size:12.5px;color:var(--muted)}
+@media (max-width:360px){.steps{grid-template-columns:1fr}.steps li{flex-direction:row;text-align:left;align-items:flex-start}.steps li>b,.steps li>small{display:block}}.nw{white-space:nowrap;display:inline-block}.how{margin:10px 0 0;padding-left:1.4em;display:grid;gap:8px}.how b{display:block}.how span{font-size:13.5px;color:var(--muted)}
 .price{margin:16px 0 12px;padding:14px;border-radius:12px;background:var(--ok-bg);text-align:center}.price p{margin:2px 0}.p-free{font:900 22px var(--f-display)}.p-then{font-size:14px}
 .btn.big{width:100%;min-height:56px;font-size:16px}.center{text-align:center}.linkish{background:none;border:0;padding:4px;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer}
 .auth,.confirm{display:flex;flex-direction:column;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}.auth h3,.confirm h3{margin:0;font:700 17px var(--f-display)}
@@ -146,13 +169,38 @@ footer{font-size:12px;color:var(--muted);line-height:1.7}
 
   <!-- for people who are not members yet: what it does, the price, and the sign-up -->
   <section class="card pitch" id="pitch" aria-labelledby="pitchTitle" hidden>
-    <h2 id="pitchTitle">かざすだけで、食品の中身がわかる</h2>
-    <ol class="how">
-      <li><b>バーコードを撮る</b><span>登録済みの商品なら、その場で◯△×が出ます。</span></li>
-      <li><b>初めての商品は、袋の裏を撮る</b><span>AIが原材料と栄養成分を読み取り、判定します。一度読んだ商品は、次から誰でもバーコードだけで判定できます。</span></li>
-      <li><b>理由と出典まで</b><span>赤色2号などの添加物、ラクトアイスなどの種類、豆腐の作り方まで、海外の規制や法律の基準を出典つきで表示します。</span></li>
+    <h2 id="pitchTitle">かざすだけで、食品の中身が<br>ひと目でわかる</h2>
+    <p class="lead">スーパーで手に取った商品を、◯△×で判定します。</p>
+
+    <!-- the three marks, each a tappable example that opens the real result screen -->
+    <div class="hero" id="heroMarks" role="list"></div>
+    <p class="hero-cap">↑ タップすると、実際の判定画面が見られます（架空の商品の例）</p>
+    <button class="btn primary big start-top" id="startBtnTop" type="button">1週間無料で始める</button>
+
+    <h3 class="sec">使い方は3ステップ</h3>
+    <ol class="steps">
+      <li><span class="step-ic" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="4" y="9" width="40" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="3"/><path d="M12 16v16M17 16v16M21 16v16M27 16v16M31 16v16M36 16v16" stroke="currentColor" stroke-width="2.5"/></svg></span><b>バーコードを撮る</b><small>初めての商品は袋の裏の表示を撮るだけ。AIが読み取ります。</small></li>
+      <li><span class="step-ic" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="8.5" cy="24" r="6" fill="none" stroke="var(--ok)" stroke-width="3.5"/><path d="M24 17 L31 30 L17 30 Z" fill="none" stroke="var(--warn)" stroke-width="3.5" stroke-linejoin="round"/><path d="M36 18 L46 30 M46 18 L36 30" stroke="var(--bad)" stroke-width="3.5" stroke-linecap="round"/></svg></span><b>◯△×がパッと出る</b><small>画面いっぱいに大きく表示。迷わず選べます。</small></li>
+      <li><span class="step-ic" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="8" y="5" width="32" height="38" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M15 15h18M15 23h18M15 31h11" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span><b>理由までわかる</b><small>なぜ△なのか、出典つきでやさしく説明します。</small></li>
     </ol>
-    <p class="small" style="margin:14px 0 6px">判定の例（架空の商品）を押すと、結果が画面いっぱいに出ます。</p>
+
+    <h3 class="sec">判定画面では、ここまでわかります</h3>
+    <div class="sample" aria-label="判定画面の例（ラクトアイス）">
+      <div class="sample-top"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 14 L88 82 L12 82 Z" fill="none" stroke="var(--warn)" stroke-width="10" stroke-linejoin="round"/></svg><div><b>バニラアイスバー</b><span>ラクトアイス</span><em>気になる点があります</em></div></div>
+      <div class="stats">
+        <div class="stat"><b>4</b><small>添加物の種類</small></div>
+        <div class="stat"><b>3.4<small class="unit">個</small></b><svg class="cubes" viewBox="0 0 76 16" aria-hidden="true"><rect x="0" y="1" width="14" height="14" rx="3"/><rect x="18" y="1" width="14" height="14" rx="3"/><rect x="36" y="1" width="14" height="14" rx="3"/><rect x="54" y="1" width="6" height="14" rx="2"/></svg><small>角砂糖（4g）にすると</small></div>
+        <div class="stat"><b>1%</b><small>1日の食塩の目標に対して</small></div>
+      </div>
+      <ul class="reasons">
+        <li class="tri"><div class="lv tri">△</div><div><b>種類別：ラクトアイス</b><span>乳固形分は「アイスクリーム」の5分の1。植物油脂が使われることが多い種類です。</span></div></li>
+      </ul>
+      <div class="sample-adds"><span><b>乳化剤</b>水と油を混ぜる</span><span><b>増粘多糖類</b>とろみをつける</span><span><b>香料</b>香りをつける</span></div>
+      <div class="sample-allergy">アレルギー物質：<span>乳</span></div>
+      <p class="sample-cap">×になる成分（赤色2号など）は赤で、良い作り方（にがりだけの豆腐など）は緑の◯で、理由と出典つきで表示します。</p>
+    </div>
+
+    <h3 class="sec">ほかの例も見てみる</h3>
     <div class="examples" id="examples"></div>
     <div class="price">
       <p class="p-free">最初の<b>1週間は無料</b></p>
@@ -436,7 +484,11 @@ const EXAMPLES = [
   { label:'果汁30%飲料', p:{ name:'りんごドリンク', category:'清涼飲料水', ingredients:'果実（りんご）、果糖ぶどう糖液糖／酸味料、香料、ビタミンC', juice_percent:30, nutrition:{ per:'500ml当たり', energy_kcal:220, sugar_g:55, salt_g:0.1 } } }
 ];
 $('#examples').innerHTML = EXAMPLES.map((e, i) => `<button class="chip" type="button" data-ex="${i}">${esc(e.label)}</button>`).join('');
-$('#examples').addEventListener('click', ev => { const b = ev.target.closest('[data-ex]'); if (!b) return; render(EXAMPLES[+b.dataset.ex].p, { example:true }); setStatus(''); });
+const HERO = [[1, 'にがりだけの豆腐'], [0, 'ラクトアイス'], [3, '赤色2号入りのお菓子']];
+$('#heroMarks').innerHTML = HERO.map(([i, cap]) => { const lv = analyze(EXAMPLES[i].p).level; return `<button type="button" role="listitem" class="${lv}" data-ex="${i}">${svgMark(lv)}<b>${MARK_WORD[lv].slice(2)}</b><small>${esc(cap)}</small></button>`; }).join('');
+const openExample = ev => { const b = ev.target.closest('[data-ex]'); if (!b) return; render(EXAMPLES[+b.dataset.ex].p, { example:true }); setStatus(''); };
+$('#examples').addEventListener('click', openExample);
+$('#heroMarks').addEventListener('click', openExample);
 
 /* ---------- my avoid list (this device only) ---------- */
 function loadAvoid(){ try { return JSON.parse(store.get('ll_avoid') || '[]'); } catch(e){ return []; } }
@@ -501,7 +553,7 @@ async function refresh(){
   if (member && sub.status === 'trialing'){ $('#trialNote').hidden = false; $('#trialNote').textContent = `無料お試し中：${ymd(new Date(sub.current_period_end))}まで。それまでに解約すれば料金はかかりません。`; }
   else $('#trialNote').hidden = true;
   if (!member){
-    $('#startBtn').textContent = sub && sub.trial_used ? '定期購入を再開する' : '1週間無料で始める';
+    $('#startBtn').textContent = $('#startBtnTop').textContent = sub && sub.trial_used ? '定期購入を再開する' : '1週間無料で始める';
     $('#loginLink').hidden = !!session;
     if (session){ $('#authForm').hidden = true; }
   }
@@ -513,7 +565,7 @@ function showAuth(mode){
   $('#authTitle').textContent = mode === 'signup' ? 'アカウントを作る' : 'ログイン';
   $('#authPass').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
   $('#authSwitch').textContent = mode === 'signup' ? 'すでに登録済みの方はログイン' : '初めての方はこちら（アカウントを作る）';
-  $('#authEmail').focus();
+  $('#authForm').scrollIntoView({ behavior:'smooth', block:'start' }); $('#authEmail').focus({ preventScroll:true });
 }
 function showConfirm(){
   $('#authForm').hidden = true; $('#confirmBox').hidden = false; updateConfirm();
@@ -529,7 +581,9 @@ function updateConfirm(){
   $('#cfSwitch').previousElementSibling.textContent = trial ? '有料への切り替え' : '料金と更新';
   $('#checkoutBtn').textContent = trial ? '上記に同意してカード登録へ進む' : '上記に同意して支払いへ進む';
 }
-$('#startBtn').addEventListener('click', () => session ? showConfirm() : showAuth('signup'));
+const start = () => session ? showConfirm() : showAuth('signup');
+$('#startBtn').addEventListener('click', start);
+$('#startBtnTop').addEventListener('click', start);
 $('#loginLink').addEventListener('click', () => showAuth('login'));
 $('#authSwitch').addEventListener('click', () => showAuth(authMode === 'signup' ? 'login' : 'signup'));
 $('#authForm').addEventListener('submit', async ev => {
