@@ -78,10 +78,21 @@ textarea{min-height:110px;resize:vertical;line-height:1.6}
 .verdict.ok{border-color:var(--ok)}
 .verdict.tri{border-color:var(--warn)}
 .verdict.bad{border-color:var(--bad)}
-.mark{position:absolute;right:-6px;top:-6px;width:150px;height:150px;pointer-events:none;opacity:.55}
-.mark svg{width:100%;height:100%;display:block}
-.v-label{font:700 12px var(--f-mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
-.v-name{margin:0;font:900 24px/1.25 var(--f-display);max-width:calc(100% - 90px);text-wrap:balance}
+/* result modal: full screen, the mark alone on top, then the product card, then the evidence */
+.modal{position:fixed;inset:0;z-index:50;background:var(--paper);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.modal-bar{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));background:var(--paper);border-bottom:1px solid var(--line)}
+.modal-title{font:700 14px var(--f-body);color:var(--muted)}
+.modal-close{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:700 15px var(--f-body);cursor:pointer}
+.modal-close:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.modal-body{max-width:560px;margin:0 auto;padding:0 16px 32px;padding-bottom:max(32px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+.big-mark{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 0 18px;margin:0 -16px;border-bottom:1px solid var(--line)}
+.big-mark.ok{background:var(--ok-bg)}.big-mark.tri{background:var(--warn-bg)}.big-mark.bad{background:var(--bad-bg)}
+.big-mark svg{width:min(52vw,220px);height:min(52vw,220px);display:block;animation:pop .35s ease-out}
+.big-mark .tag-example{margin-top:4px}
+.modal-note{margin:0;font-size:13px;color:var(--muted)}.modal-note:empty{display:none}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+body.modal-open{overflow:hidden}
+.v-name{margin:0;font:900 24px/1.25 var(--f-display);text-wrap:balance}
 .v-cat{margin:0;font:700 15px var(--f-body)}
 .v-sum{margin:0;font:700 18px/1.5 var(--f-display)}
 .verdict.ok .v-sum{color:var(--accent)}
@@ -141,7 +152,7 @@ footer{font-size:12px;color:var(--muted);line-height:1.7}
       <li><b>初めての商品は、袋の裏を撮る</b><span>AIが原材料と栄養成分を読み取り、判定します。一度読んだ商品は、次から誰でもバーコードだけで判定できます。</span></li>
       <li><b>理由と出典まで</b><span>赤色2号などの添加物、ラクトアイスなどの種類、豆腐の作り方まで、海外の規制や法律の基準を出典つきで表示します。</span></li>
     </ol>
-    <p class="small" style="margin:14px 0 6px">判定の例（架空の商品）を押すと、下に結果が出ます。</p>
+    <p class="small" style="margin:14px 0 6px">判定の例（架空の商品）を押すと、結果が画面いっぱいに出ます。</p>
     <div class="examples" id="examples"></div>
     <div class="price">
       <p class="p-free">最初の<b>1週間は無料</b></p>
@@ -200,8 +211,6 @@ footer{font-size:12px;color:var(--muted);line-height:1.7}
     <p class="status" id="status" role="status" aria-live="polite"></p>
   </section>
 
-  <section class="card verdict" id="verdict" aria-live="polite"></section>
-  <section class="card" id="detail"></section>
 
   <section class="card member" aria-labelledby="avoidTitle" hidden>
     <h2 id="avoidTitle">わたしが避けたいもの</h2>
@@ -231,6 +240,17 @@ footer{font-size:12px;color:var(--muted);line-height:1.7}
     <p><a href="tokushoho.html">特定商取引法に基づく表記</a>　<a href="terms.html">利用規約</a>　<a href="privacy.html">プライバシーポリシー</a></p>
     判定は、パッケージの表示とこのアプリの基準にもとづく参考情報です。日本で販売されている食品は、日本の法律の基準を満たしています。アレルギーについては、必ず実物のパッケージの表示を確認してください。<br>商品データの一部は <a href="https://world.openfoodfacts.org/" target="_blank" rel="noopener">Open Food Facts</a>（ODbL）を利用しています。© Blue Leaf Studio
   </footer>
+</div>
+
+<div class="modal" id="resultModal" role="dialog" aria-modal="true" aria-labelledby="vName" hidden>
+  <div class="modal-bar"><span class="modal-title">判定結果</span><button class="modal-close" id="modalClose" type="button">× 閉じる</button></div>
+  <div class="modal-body">
+    <div class="big-mark" id="bigMark" aria-live="polite"></div>
+    <p class="modal-note" id="modalNote"></p>
+    <section class="card verdict" id="verdict"></section>
+    <section class="card" id="detail"></section>
+    <button class="btn primary big" id="modalNext" type="button">次の商品を調べる</button>
+  </div>
 </div>
 
 <script src="config.js"></script>
@@ -354,15 +374,18 @@ const svgMark = lv => lv === 'ok'
   : '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M20 20 L80 80 M80 20 L20 80" stroke="var(--bad)" stroke-width="12" stroke-linecap="round"/></svg>';
 const SUM = { ok:'成分も質も、このアプリの基準で問題なし', tri:'気になる点があります', bad:'×になる成分が入っています' };
 let current = null;
+const MARK_WORD = { ok:'◯ 問題なし', tri:'△ 気になる点あり', bad:'× 避けたい成分あり' };
 function render(p, opts = {}){
-  current = { p, opts };
+  const { silent, ...keep } = opts;
+  current = { p, opts:keep };
   const r = analyze(p);
+  const bm = $('#bigMark');
+  bm.className = 'big-mark ' + r.level;
+  bm.innerHTML = `${svgMark(r.level).replace('aria-hidden="true"', `role="img" aria-label="${MARK_WORD[r.level]}"`)}${opts.example ? '<span class="tag-example">架空の商品の例</span>' : ''}`;
   const v = $('#verdict');
   v.className = 'card verdict ' + r.level;
-  v.innerHTML = `<div class="mark">${svgMark(r.level)}</div>
-    <div class="v-label">判定 ${MARK[r.level]}${opts.example ? ' <span class="tag-example">架空の商品の例</span>' : ''}</div>
-    <h2 class="v-name">${esc(p.name || '名前なし')}</h2>
-    ${p.category ? `<p class="v-cat">${esc(p.category)}</p>` : ''}
+  v.innerHTML = `<h2 class="v-name" id="vName">${esc(p.name || '名前なし')}</h2>
+    ${p.category && p.category !== p.name ? `<p class="v-cat">${esc(p.category)}</p>` : ''}
     <p class="v-sum">${SUM[r.level]}</p>
     <div class="stats">
       <div class="stat"><b>${r.addCount}</b><small>添加物の種類</small></div>
@@ -378,7 +401,30 @@ function render(p, opts = {}){
     ${r.allergens.length ? `<div class="allergy">${r.allergens.map(a => `<span>${esc(a)}</span>`).join('')}</div>` : '<p class="small">表示の中に見つかりませんでした。</p>'}
     <p class="caution">アレルギーは命に関わります。読み取りの間違いや表示の変更もあるため、必ず実物のパッケージの表示を確認してください。</p>
     ${p.ingredients ? `<details><summary>読み取った原材料名</summary><p class="small" style="margin-top:8px">${esc(p.ingredients)}</p></details>` : ''}`;
+  if (!silent) openModal();
 }
+
+/* ---------- result modal ---------- */
+const modal = $('#resultModal');
+let modalFrom = null;
+function openModal(){
+  if (modal.hidden){
+    modalFrom = document.activeElement;
+    modal.hidden = false; document.body.classList.add('modal-open');
+    try { history.pushState({ llResult:true }, ''); } catch(e){}
+  }
+  modal.scrollTop = 0; $('#modalClose').focus({ preventScroll:true });
+}
+function closeModal(fromHistory){
+  if (modal.hidden) return;
+  modal.hidden = true; document.body.classList.remove('modal-open');
+  if (!fromHistory && history.state && history.state.llResult) history.back();
+  if (modalFrom && modalFrom.focus) modalFrom.focus({ preventScroll:true });
+}
+$('#modalClose').addEventListener('click', () => closeModal());
+$('#modalNext').addEventListener('click', () => { closeModal(); const t = $('#scanCard').hidden ? $('#pitch') : $('#scanCard'); t.scrollIntoView({ block:'start' }); });
+window.addEventListener('popstate', () => closeModal(true));
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeModal(); });
 
 /* ---------- examples (fictional products, clearly marked) ---------- */
 const EXAMPLES = [
@@ -390,7 +436,7 @@ const EXAMPLES = [
   { label:'果汁30%飲料', p:{ name:'りんごドリンク', category:'清涼飲料水', ingredients:'果実（りんご）、果糖ぶどう糖液糖／酸味料、香料、ビタミンC', juice_percent:30, nutrition:{ per:'500ml当たり', energy_kcal:220, sugar_g:55, salt_g:0.1 } } }
 ];
 $('#examples').innerHTML = EXAMPLES.map((e, i) => `<button class="chip" type="button" data-ex="${i}">${esc(e.label)}</button>`).join('');
-$('#examples').addEventListener('click', ev => { const b = ev.target.closest('[data-ex]'); if (!b) return; render(EXAMPLES[+b.dataset.ex].p, { example:true }); setStatus(''); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' }); });
+$('#examples').addEventListener('click', ev => { const b = ev.target.closest('[data-ex]'); if (!b) return; render(EXAMPLES[+b.dataset.ex].p, { example:true }); setStatus(''); });
 
 /* ---------- my avoid list (this device only) ---------- */
 function loadAvoid(){ try { return JSON.parse(store.get('ll_avoid') || '[]'); } catch(e){ return []; } }
@@ -403,12 +449,12 @@ $('#avoidChips').addEventListener('click', ev => {
   const b = ev.target.closest('[data-w]'); if (!b) return;
   const w = b.dataset.w, list = loadAvoid(), i = list.indexOf(w);
   if (i >= 0) list.splice(i, 1); else list.push(w);
-  saveAvoid(list); renderAvoid(); if (current) render(current.p, current.opts);
+  saveAvoid(list); renderAvoid(); if (current) render(current.p, { ...current.opts, silent:true });
 });
 $('#avoidAdd').addEventListener('click', () => {
   const w = $('#avoidInput').value.trim().slice(0, 20); if (!w) return;
   const list = loadAvoid(); if (!list.includes(w)) list.push(w);
-  saveAvoid(list); $('#avoidInput').value = ''; renderAvoid(); if (current) render(current.p, current.opts);
+  saveAvoid(list); $('#avoidInput').value = ''; renderAvoid(); if (current) render(current.p, { ...current.opts, silent:true });
 });
 
 /* ---------- rules page ---------- */
@@ -430,7 +476,7 @@ $('#rules').innerHTML = `
   <p class="small">特定の会社や商品を評価するものではなく、パッケージの表示から、どの商品にも同じルールで判定しています。</p>`;
 
 /* ---------- status ---------- */
-function setStatus(msg, err){ const s = $('#status'); s.textContent = msg; s.classList.toggle('err', !!err); }
+function setStatus(msg, err){ const s = $('#status'); s.textContent = msg; s.classList.toggle('err', !!err); $('#modalNote').textContent = err ? '' : msg; }
 
 /* ---------- account: Supabase login + subscription state ---------- */
 const CFG = window.LL_CONFIG || {};
@@ -548,7 +594,7 @@ function renderSaved(){
 $('#savedList').addEventListener('click', ev => {
   const b = ev.target.closest('[data-jan]'); if (!b) return;
   const x = loadHist().find(h => h.jan === b.dataset.jan); if (!x) return;
-  render(x.label); setStatus(`JAN ${x.jan}`); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' });
+  render(x.label); setStatus(`JAN ${x.jan}`);
 });
 
 /* ---------- barcode ---------- */
@@ -581,9 +627,9 @@ async function lookupJan(jan){
   pendingJan = jan;
   setStatus(`JAN ${jan} を探しています…`);
   let row = null; try { row = await dbGet(jan); } catch(e){}
-  if (row){ const l = rowToLabel(row); render(l); pushHist(jan, l); setStatus(`JAN ${jan}：登録されている表示から判定しました。`); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  if (row){ const l = rowToLabel(row); render(l); pushHist(jan, l); setStatus(`JAN ${jan}：登録されている表示から判定しました。`); return; }
   const off = await offGet(jan);
-  if (off){ render(off); pushHist(jan, off); setStatus(`JAN ${jan}：Open Food Facts（世界の食品データベース）の情報から判定しました。`); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  if (off){ render(off); pushHist(jan, off); setStatus(`JAN ${jan}：Open Food Facts（世界の食品データベース）の情報から判定しました。`); return; }
   setStatus(`JAN ${jan}：初めての商品です。「袋の裏を撮って読む」で原材料の表示を撮ってください。読み取ると、このバーコードに登録されます。`);
 }
 
@@ -602,7 +648,6 @@ $('#labelFile').addEventListener('change', async ev => {
     const { label, saved } = await api('read', { image:await toJpeg(f), jan:pendingJan });
     render(label); if (pendingJan) pushHist(pendingJan, label);
     setStatus('読み取った表示から判定しました。' + (saved ? `　JAN ${pendingJan} に登録しました。次からはバーコードだけで判定できます。` : ''));
-    $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' });
   } catch(e){
     setStatus(e.code === 'no_ingredients' ? '原材料名を読み取れませんでした。原材料の欄が画面に大きく写るように撮り直してください。'
       : e.code === 'not_member' ? '会員の期間が終わっています。ページを開き直してください。'
@@ -631,7 +676,7 @@ function parseLabel(text, nm){
 $('#txtBtn').addEventListener('click', () => {
   const body = $('#txtBody').value.trim(), nm = $('#txtName').value.trim();
   if (!body) return setStatus('原材料名を貼り付けてください。', true);
-  render(parseLabel(body, nm)); setStatus('貼り付けた内容から判定しました。'); $('#verdict').scrollIntoView({ behavior:'smooth', block:'start' });
+  render(parseLabel(body, nm)); setStatus('貼り付けた内容から判定しました。');
 });
 
 /* ---------- install as an app ---------- */
@@ -639,7 +684,6 @@ if ('serviceWorker' in navigator) window.addEventListener('load', () => navigato
 
 renderAvoid();
 renderSaved();
-render(EXAMPLES[0].p, { example:true });
 (async () => {
   const back = new URLSearchParams(location.search).get('checkout');
   if (back) history.replaceState(null, '', location.pathname);
